@@ -18,7 +18,9 @@ Given a built `CosmosShuttle.exe` executable, you can run it to perform an impor
 
 ## Obtaining a connection string
 
-The tool authenticates with a Cosmos account connection string. This can be found in Azure Portal > Cosmos account > Settings > Keys. When exporting, a read-only key will suffice. When importing, a read-write key is required.
+The tool authenticates with a Cosmos account connection string. This can be found in Azure Portal > Cosmos account > Settings > Keys. 
+
+When exporting, a read-only key will suffice. When importing, a read-write key is required.
 
 ## Export data from Cosmos DB
 
@@ -32,7 +34,7 @@ where:
 
 If successful, a JSON file is created representing all the items in the container.
 
-## Import data to Cosmos DB
+## Import data into Cosmos DB
 
 `CosmosShuttle.exe import --source <SOURCE_FILE> --db <DATABASE_NAME> --container <CONTAINER_NAME> --batchsize <BATCH_SIZE> --connection "<CONNECTION_STRING>"`
 
@@ -43,3 +45,7 @@ where:
 - DATABASE_NAME: Target Cosmos DB database
 - CONTAINER_NAME: identifier of a target container into which to import all items
 - CONNECTION_STRING: connection string value (Read-Write)
+
+If successful, all items in the source file will be created or updated in the target container.
+
+The tool uses an upsert operation based on the item's `id` value. If an item already exists in the target container with the same `id`, it will be overwritten with the source item. Otherwise, it will be created.
