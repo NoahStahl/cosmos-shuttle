@@ -22,8 +22,8 @@ public static class CosmosUtils
         }
         var container = client.GetContainer(command.DatabaseName, command.ContainerName);
         var props = await container.ReadContainerAsync();
-        var paritionKeyProperty = props.Resource.PartitionKeyPath?.TrimStart('/');
+        var partitionKeyProperty = props.Resource.PartitionKeyPath?.TrimStart('/');
 
-        return (container, paritionKeyProperty);
+        return (container, partitionKeyProperty);
     }
 }

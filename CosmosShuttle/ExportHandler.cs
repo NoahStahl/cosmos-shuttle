@@ -11,7 +11,7 @@ public class ExportHandler : IHandler
 
     public async Task Run(Command command)
     {
-        (var container, string? pkProperty) = await CosmosUtils.ConnectContainer(command);
+        (var container, _) = await CosmosUtils.ConnectContainer(command);
 
         var timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH-mm-ss");
         var fileName = $"cosmos-export-{command.DatabaseName}-{command.ContainerName}-{timestamp}.json";
