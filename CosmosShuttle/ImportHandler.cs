@@ -66,6 +66,7 @@ public class ImportHandler : IHandler
 
         file.Close();
 
+        Console.WriteLine();
         Console.WriteLine($"Finished importing {itemCount} items, elapsed: {sw.Elapsed}");
         Console.WriteLine($"Succeeded: {succeeded}");
         Console.WriteLine($"Failed: {failed}");

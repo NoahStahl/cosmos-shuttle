@@ -32,7 +32,7 @@ public class ExportHandler : IHandler
                 return;
             }
 
-            var json = JsonDocument.Parse(response.Content);
+            using var json = JsonDocument.Parse(response.Content);
             var documents = json.RootElement.GetProperty("Documents");
             using var items = documents.EnumerateArray();
             expectedCount = items.First().GetInt32();
@@ -47,16 +47,16 @@ public class ExportHandler : IHandler
             using ResponseMessage response = await resultSet.ReadNextAsync();
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"Query failed with status: {response.StatusCode}");
+                Console.WriteLine($"Query failed with status: {response.StatusCode} and message {response.ErrorMessage}");
                 return;
             }
 
-            response.Headers.TryGetValue("x-ms-item-count", out string countRaw);
+            response.Headers.TryGetValue("x-ms-item-count", out string? countRaw);
             _ = int.TryParse(countRaw, out int count);
             if (count == 0) continue;
 
 
-            var json = JsonDocument.Parse(response.Content);
+            using var json = JsonDocument.Parse(response.Content);
             var documents = json.RootElement.GetProperty("Documents");
 
             int i = 0;

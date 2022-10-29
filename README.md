@@ -8,7 +8,7 @@ To build the project into the tool executable:
 
 1. Clone this repository
 2. From a command line terminal, change to `.../cosmos-shuttle/CosmosShuttle`
-3. Run build command: `dotnet publish -c Release -r win-x64`
+3. Run build command: `dotnet publish -c Release -r win-x64 --self-contained`
 4. Locate the produced `CosmosShuttle.exe` file under `.../bin/Release/net6.0/win-x64/publish`
 
 
