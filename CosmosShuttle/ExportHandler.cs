@@ -9,10 +9,20 @@ public class ExportHandler : IHandler
     static readonly byte comma = Convert.ToByte(',');
     static readonly byte newline = Convert.ToByte('\n');
 
-    public async Task Run(Command command)
+    public async ValueTask Run(Command command)
     {
         (var container, _) = await CosmosUtils.ConnectContainer(command);
+        if (container is null)
+        {
+            Console.WriteLine("Stopping due to failed connection");
+            return;
+        }
 
+        // Pre-count items in container
+        int expectedCount = await CountItems(container);
+        Console.WriteLine($"Starting export of {expectedCount} expected items");
+
+        // Create file
         var timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH-mm-ss");
         var fileName = $"cosmos-export-{command.DatabaseName}-{command.ContainerName}-{timestamp}.json";
         var path = Path.Combine(Environment.CurrentDirectory, fileName);
@@ -20,25 +30,6 @@ public class ExportHandler : IHandler
         file.WriteByte(Convert.ToByte('['));
         file.WriteByte(newline);
 
-        // Pre-count items in container
-        using var countResultSet = container.GetItemQueryStreamIterator("SELECT VALUE COUNT(1) FROM c");
-        int expectedCount = 0;
-        while (countResultSet.HasMoreResults)
-        {
-            using ResponseMessage response = await countResultSet.ReadNextAsync();
-            if (!response.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"Count operation failed with status: {response.StatusCode}");
-                return;
-            }
-
-            using var json = JsonDocument.Parse(response.Content);
-            var documents = json.RootElement.GetProperty("Documents");
-            using var items = documents.EnumerateArray();
-            expectedCount = items.First().GetInt32();
-        }
-
-        Console.WriteLine($"Starting export of {expectedCount} expected items");
         int total = 0;
         var sw = Stopwatch.StartNew();
         using var resultSet = container.GetItemQueryStreamIterator("SELECT * from c");
@@ -86,5 +77,28 @@ public class ExportHandler : IHandler
         Console.WriteLine();
         Console.WriteLine($"Finished exporting {total} items, elapsed: {sw.Elapsed}");
         Console.WriteLine($"Created file: {path}");
+    }
+
+    static async ValueTask<int> CountItems(Container container)
+    {
+        using var countResultSet = container.GetItemQueryStreamIterator("SELECT VALUE COUNT(1) FROM c");
+        int expectedCount = 0;
+        while (countResultSet.HasMoreResults)
+        {
+            using ResponseMessage response = await countResultSet.ReadNextAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"Count operation failed with status: {response.StatusCode}");
+                return 0;
+            }
+
+            using var json = JsonDocument.Parse(response.Content);
+            var documents = json.RootElement.GetProperty("Documents");
+            using var items = documents.EnumerateArray();
+            expectedCount = items.First().GetInt32();
+            break;
+        }
+
+        return expectedCount;
     }
 }

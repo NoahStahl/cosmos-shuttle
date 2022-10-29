@@ -2,5 +2,5 @@
 
 public interface IHandler
 {
-    Task Run(Command command);
+    ValueTask Run(Command command);
 }

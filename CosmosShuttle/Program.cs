@@ -12,6 +12,10 @@ try
         _ => throw new InvalidOperationException("Operation not recognized")
     };
     await handler.Run(command);
+
+#if DEBUG
+    Console.ReadKey();
+#endif
 }
 catch (Exception ex)
 {

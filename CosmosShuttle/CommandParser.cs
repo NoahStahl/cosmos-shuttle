@@ -24,6 +24,11 @@ public static class CommandParser
             }
         }
 
+        // Required parameters
+        if (!options.TryGetValue("connection", out string? connectionString))
+        {
+            throw new Exception("Missing option --connection");
+        }
         if (!options.TryGetValue("container", out string? containerName))
         {
             throw new Exception("Missing option --container");
@@ -32,20 +37,23 @@ public static class CommandParser
         {
             throw new Exception("Missing option --db");
         }
-        if (!options.TryGetValue("connection", out string? connectionString))
-        {
-            throw new Exception("Missing option --connection");
-        }
         if (!options.TryGetValue("source", out string? source) && baseCommand == CommandType.Import)
         {
             throw new Exception("Missing option --source");
         }
 
+        // Optional parameters
         int batchSize = 25;
-        if (options.TryGetValue("batchsize", out string? batchsizeRaw) 
+        if (options.TryGetValue("batchsize", out string? batchsizeRaw)
             && (!int.TryParse(batchsizeRaw, out batchSize) || batchSize < 1 || batchSize > 500))
         {
             throw new Exception("Invalid value provided for --batchsize. Must be positive integer 1 < 500");
+        }
+
+        var logLevel = LogLevel.Info;
+        if (options.TryGetValue("logging", out string? loggingRaw) && (!Enum.TryParse(loggingRaw, ignoreCase: true, out logLevel)))
+        {
+            throw new Exception("Invalid value provided for --logging. Can be 'info' or 'verbose'");
         }
 
         return new()
@@ -55,6 +63,7 @@ public static class CommandParser
             ConnectionString = connectionString,
             ContainerName = containerName,
             DatabaseName = databaseName,
+            LogLevel = logLevel,
             Source = source
         };
     }
@@ -63,11 +72,18 @@ public static class CommandParser
 public record Command
 {
     public CommandType BaseCommand { get; set; }
-    public string DatabaseName { get; set; } = string.Empty;
-    public string ContainerName { get; set; } = string.Empty;
-    public string ConnectionString { get; set; } = string.Empty;
-    public string? Source { get; set; }
+
     public int BatchSize { get; set; } = 25;
+
+    public string ContainerName { get; set; } = string.Empty;
+
+    public string DatabaseName { get; set; } = string.Empty;
+
+    public string ConnectionString { get; set; } = string.Empty;
+
+    public LogLevel LogLevel { get; set; }
+
+    public string? Source { get; set; }
 }
 
 public enum CommandType
@@ -75,4 +91,10 @@ public enum CommandType
     None,
     Export,
     Import
+}
+
+public enum LogLevel
+{
+    Info,
+    Verbose
 }

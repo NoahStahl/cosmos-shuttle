@@ -1,6 +1,7 @@
 ﻿using Microsoft.Azure.Cosmos;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace CosmosShuttle;
 
@@ -8,7 +9,7 @@ public class ImportHandler : IHandler
 {
     static readonly ItemRequestOptions operationOptions = new() { EnableContentResponseOnWrite = false };
 
-    public async Task Run(Command command)
+    public async ValueTask Run(Command command)
     {
         if (string.IsNullOrWhiteSpace(command.Source))
         {
@@ -20,35 +21,69 @@ public class ImportHandler : IHandler
             throw new ArgumentException($"File not found: {command.Source}");
         }
 
-        using var file = File.OpenRead(command.Source);
-        using var json = await JsonDocument.ParseAsync(file, new() { AllowTrailingCommas = true });
-        using JsonElement.ArrayEnumerator items = json.RootElement.EnumerateArray();
-
         (var container, string? pkProperty) = await CosmosUtils.ConnectContainer(command);
+        if (container is null)
+        {
+            Console.WriteLine("Stopping due to failed connection");
+            return;
+        }
 
         Console.WriteLine($"Starting import of items from {command.Source}");
         Console.WriteLine($"Batch size: {command.BatchSize}");
+
+        using var file = File.OpenRead(command.Source);
+        using var json = await JsonDocument.ParseAsync(file, new() { AllowTrailingCommas = true });
+        var items = json.RootElement.EnumerateArray();
+
         int succeeded = 0;
         int failed = 0;
-        int itemCount = 0;
+        int index = 0;
         int processedCount = 0;
         var sw = Stopwatch.StartNew();
         var batch = new List<BatchedOperation>(command.BatchSize);
         int batchIndex = 1;
         foreach (var item in items)
         {
-            itemCount++;
-            string? partition = null;
-            if (pkProperty is not null && item.TryGetProperty(pkProperty, out var pk))
+            // Ensure id property defined (case-insensitive)
+            string? itemId = null;
+            (bool idFound, string? key) = item.TryGetPropertyIgnoreCase("id", out var idProp);
+            if (!idFound || key is null)
             {
-                partition = pk.GetString();
+                Console.WriteLine($"! Invalid data: No id value present for item [{index}]");
+                return;
             }
+
             using MemoryStream stream = new();
             using Utf8JsonWriter writer = new(stream);
-            item.WriteTo(writer);
-            writer.Flush();
+            if (key == "id")
+            {
+                itemId = idProp.GetString();
+                item.WriteTo(writer);
+                writer.Flush();
+            }
+            else
+            {
+                // Transform ID property to lowercased key
+                var node = JsonSerializer.Deserialize<JsonNode>(item)?.AsObject();
+                if (node is not null)
+                {
+                    node.Remove(key);
+                    node.TryAdd("id", idProp.GetString());
+                    node.WriteTo(writer);
+                    writer.Flush();
+                }
+            }
+
+            // Ensure partition key is present if container is partitioned
+            string? partition = null;
+            if (pkProperty is not null && (!item.TryGetProperty(pkProperty, out var pk) || (partition = pk.GetString()) is null))
+            {
+                Console.WriteLine($"! Invalid data: Item {itemId ?? $"[{index}]"} is missing expected partition key property '{pkProperty}'");
+                return;
+            }
+
+            // Build and process operation batches
             var task = container.UpsertItemStreamAsync(stream, new(partition), operationOptions);
-            string? itemId = item.TryGetProperty("id", out var id) ? id.GetString() : null;
             batch.Add(new(itemId, task));
 
             if (batch.Count >= command.BatchSize)
@@ -57,6 +92,8 @@ public class ImportHandler : IHandler
                 batch.Clear();
                 batchIndex++;
             }
+
+            index++;
         }
 
         if (batch.Count > 0)
@@ -67,22 +104,23 @@ public class ImportHandler : IHandler
         file.Close();
 
         Console.WriteLine();
-        Console.WriteLine($"Finished importing {itemCount} items, elapsed: {sw.Elapsed}");
+        Console.WriteLine($"Finished importing {index} items, elapsed: {sw.Elapsed}");
         Console.WriteLine($"Succeeded: {succeeded}");
         Console.WriteLine($"Failed: {failed}");
 
         async Task ProcessBatch()
         {
             int start = (batchIndex - 1) * command.BatchSize;
-            int end = Math.Min(batchIndex * command.BatchSize, itemCount);
+            int end = Math.Min(batchIndex * command.BatchSize, index);
             processedCount += end - start;
             Console.SetCursorPosition(0, Console.CursorTop);
-            Console.Write($"Processed items: {processedCount} ({(double)processedCount / itemCount * 100:F2}%)");
-            var batchTasks = batch.Select(i => i.Task).ToArray();
-            await Task.WhenAll(batchTasks);
-            foreach (var completedTask in batchTasks)
+            Console.Write($"Processed items: {processedCount} ({(double)processedCount / index * 100:F2}%){Environment.NewLine}");
+
+            var tasks = batch.Select(i => i.Task).ToArray();
+            await Task.WhenAll(tasks);
+            foreach (var task in tasks)
             {
-                var response = await completedTask;
+                var response = await task;
                 if (response.IsSuccessStatusCode)
                 {
                     succeeded++;
@@ -90,12 +128,12 @@ public class ImportHandler : IHandler
                 else
                 {
                     failed++;
-                    var failedItemId = batch.FirstOrDefault(i => i.Task.Id == completedTask.Id)?.ItemId;
-                    Console.WriteLine($"Failed to import item with id '{failedItemId}', response status: {response.StatusCode}");
+                    var failedItemId = batch.FirstOrDefault(i => i.Task.Id == task.Id)?.ItemId;
+                    Console.WriteLine($"! Failed to import item '{failedItemId}', response status: {response.StatusCode}");
                 }
             }
         }
     }
 }
 
-public record BatchedOperation(string? ItemId, Task<ResponseMessage> Task);
+public sealed record BatchedOperation(string? ItemId, Task<ResponseMessage> Task);

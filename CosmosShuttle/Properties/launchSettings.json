@@ -1,0 +1,15 @@
+{
+  "profiles": {
+    "CosmosShuttle": {
+      "commandName": "Project"
+    },
+    "Emulator Export": {
+      "commandName": "Project",
+      "commandLineArgs": "export --db ShuttleDb --container Data --connection emulator"
+    },
+    "Emulator Import": {
+      "commandName": "Project",
+      "commandLineArgs": "import --db ShuttleDb --container Data --connection emulator --source Data/test-data.json"
+    }
+  }
+}

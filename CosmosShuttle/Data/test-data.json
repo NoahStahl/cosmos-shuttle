@@ -1,0 +1,22 @@
+[
+  {
+    "id": "126edbac-19ba-4d50-8fd5-ca17ee742a9f",
+    "foo": "bar",
+    "pk": "partition1",
+    "_rid": "OkgKAOu5pmgBAAAAAAAAAA==",
+    "_self": "dbs/OkgKAA==/colls/OkgKAOu5pmg=/docs/OkgKAOu5pmgBAAAAAAAAAA==/",
+    "_etag": "\"00000000-0000-0000-ebac-eea4ec3a01d8\"",
+    "_attachments": "attachments/",
+    "_ts": 1667058097
+  },
+  {
+    "Id": "f455d0e5-407f-4218-a6fa-d29dafba5eb3",
+    "foo": "baz",
+    "pk": "partition2",
+    "_rid": "OkgKAOu5pmgMAAAAAAAAAA==",
+    "_self": "dbs/OkgKAA==/colls/OkgKAOu5pmg=/docs/OkgKAOu5pmgMAAAAAAAAAA==/",
+    "_etag": "\"00000000-0000-0000-ebb1-c69b104001d8\"",
+    "_attachments": "attachments/",
+    "_ts": 1667060178
+  }
+]
