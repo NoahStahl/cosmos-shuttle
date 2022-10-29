@@ -12,12 +12,12 @@ try
         _ => throw new InvalidOperationException("Operation not recognized")
     };
     await handler.Run(command);
-
-#if DEBUG
-    Console.ReadKey();
-#endif
 }
 catch (Exception ex)
 {
     Console.WriteLine($"Something went wrong: {ex.Message}");
 }
+
+#if DEBUG
+Console.ReadKey();
+#endif

@@ -11,7 +11,7 @@
   },
   {
     "Id": "f455d0e5-407f-4218-a6fa-d29dafba5eb3",
-    "foo": "baz",
+    "Bar": "baz",
     "pk": "partition2",
     "_rid": "OkgKAOu5pmgMAAAAAAAAAA==",
     "_self": "dbs/OkgKAA==/colls/OkgKAOu5pmg=/docs/OkgKAOu5pmgMAAAAAAAAAA==/",

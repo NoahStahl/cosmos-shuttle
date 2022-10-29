@@ -14,11 +14,17 @@ public static class CommandParser
             throw new Exception("Invalid operation. Must be 'export' or 'import'");
         }
 
-        var options = new Dictionary<string, string>();
+        var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         for (int i = 1; i < args.Length; i++)
         {
             if (args[i].StartsWith("--"))
             {
+                var next = args[i + 1];
+                if (next.StartsWith("--"))
+                {
+                    throw new Exception($"Invalid value for {args[i]}. All parameters use switch followed by value: --option value");
+                }
+
                 options.Add(args[i][2..], args[i + 1]);
                 i++;
             }
@@ -56,10 +62,17 @@ public static class CommandParser
             throw new Exception("Invalid value provided for --logging. Can be 'info' or 'verbose'");
         }
 
+        var camelCase = false;
+        if (options.TryGetValue("camelcase", out string? camelCaseRow) && (!bool.TryParse(camelCaseRow, out camelCase)))
+        {
+            throw new Exception("Invalid value provided for --camelcase. Can be 'true' or 'false' (default is false)");
+        }
+
         return new()
         {
             BatchSize = batchSize,
             BaseCommand = baseCommand,
+            Camelcase= camelCase,
             ConnectionString = connectionString,
             ContainerName = containerName,
             DatabaseName = databaseName,
@@ -74,6 +87,8 @@ public record Command
     public CommandType BaseCommand { get; set; }
 
     public int BatchSize { get; set; } = 25;
+
+    public bool Camelcase { get; set; }
 
     public string ContainerName { get; set; } = string.Empty;
 

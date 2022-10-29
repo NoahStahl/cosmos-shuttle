@@ -7,7 +7,7 @@ namespace CosmosShuttle;
 
 public class ImportHandler : IHandler
 {
-    static readonly ItemRequestOptions operationOptions = new() { EnableContentResponseOnWrite = false };
+    static readonly ItemRequestOptions omitResponseContent = new() { EnableContentResponseOnWrite = false };
 
     public async ValueTask Run(Command command)
     {
@@ -59,20 +59,29 @@ public class ImportHandler : IHandler
             {
                 itemId = idProp.GetString();
                 item.WriteTo(writer);
-                writer.Flush();
             }
-            else
+            else if (!command.Camelcase)
             {
                 // Transform ID property to lowercased key
-                var node = JsonSerializer.Deserialize<JsonNode>(item)?.AsObject();
-                if (node is not null)
-                {
-                    node.Remove(key);
-                    node.TryAdd("id", idProp.GetString());
-                    node.WriteTo(writer);
-                    writer.Flush();
-                }
+                var node = JsonSerializer.Deserialize<JsonNode>(item)?.AsObject() ?? throw new InvalidOperationException($"Failed to parse data item: {item.ToString()}");
+                node.Remove(key);
+                node.TryAdd("id", idProp.GetString());
+                node.WriteTo(writer);
             }
+            else if (command.Camelcase)
+            {
+                // Transform all keys to camelCase
+                var node = JsonSerializer.Deserialize<JsonNode>(item)?.AsObject() ?? throw new InvalidOperationException($"Failed to parse data item: {item.ToString()}");
+                var transforms = node.GetCamelcaseTransforms();
+                foreach (var transform in transforms)
+                {
+                    var value = node[transform.From];   // Stash value
+                    node.Remove(transform.From);        // Remove old key
+                    node.TryAdd(transform.To, value);   // Add new key
+                }
+                node.WriteTo(writer);
+            }
+            writer.Flush();
 
             // Ensure partition key is present if container is partitioned
             string? partition = null;
@@ -83,7 +92,7 @@ public class ImportHandler : IHandler
             }
 
             // Build and process operation batches
-            var task = container.UpsertItemStreamAsync(stream, new(partition), operationOptions);
+            var task = container.UpsertItemStreamAsync(stream, new(partition), omitResponseContent);
             batch.Add(new(itemId, task));
 
             if (batch.Count >= command.BatchSize)
