@@ -31,6 +31,8 @@ public static class Extensions
         return transforms;
     }
 
+    public static bool IsEven(this int value) => value % 2 == 0;
+
     public static bool TryCamelCase(this string input, out string result)
     {
         result = input;

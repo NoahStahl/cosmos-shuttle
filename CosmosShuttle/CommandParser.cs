@@ -14,8 +14,13 @@ public static class CommandParser
             throw new Exception("Invalid operation. Must be 'export' or 'import'");
         }
 
+        if (args.Length.IsEven())
+        {
+            throw new Exception("Invalid parameters. Expected matched pairs of ' --option value'. Is a value missing?");
+        }
+
         var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        for (int i = 1; i < args.Length; i++)
+        for (int i = 1; i < args.Length - 1; i++)
         {
             if (args[i].StartsWith("--"))
             {
