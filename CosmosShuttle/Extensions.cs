@@ -43,6 +43,13 @@ public static class Extensions
         return node;
     }
 
+    public static void ClearConsoleLine()
+    {
+        Console.SetCursorPosition(0, Console.CursorTop);
+        for (int i = 0; i < Console.WindowWidth; i++) Console.Write(" ");
+        Console.SetCursorPosition(0, Console.CursorTop);
+    }
+
     public static IReadOnlyDictionary<string, string> GetCamelcaseTransforms(this JsonElement item)
     {
         if (item.ValueKind != JsonValueKind.Object)

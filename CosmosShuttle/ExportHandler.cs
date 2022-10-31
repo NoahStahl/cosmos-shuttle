@@ -65,8 +65,9 @@ public sealed class ExportHandler : IHandler
 
             file.Flush();
 
-            Console.SetCursorPosition(0, Console.CursorTop);
-            Console.Write($"Processed items: {total} ({(double)total / expectedCount * 100:F2}%)");
+            var rate = Math.Round(total / sw.Elapsed.TotalSeconds);
+            Extensions.ClearConsoleLine();
+            Console.Write($"Processed items: {total} | {(double)total / expectedCount * 100:F2}% | {rate}/sec");
         }
 
         file.WriteByte(newline);

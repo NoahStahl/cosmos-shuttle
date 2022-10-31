@@ -108,9 +108,10 @@ public sealed class ImportHandler : IHandler
         }
 
         file.Close();
-
+        
+        var elapsed = $"{sw.Elapsed.TotalHours:F0}h {sw.Elapsed.TotalMinutes:F0}m {sw.Elapsed.TotalSeconds:F0}s";
         Console.WriteLine();
-        Console.WriteLine($"Finished importing {index} items, elapsed: {sw.Elapsed}");
+        Console.WriteLine($"Finished importing {index} items, elapsed: {elapsed}");
         Console.WriteLine($"Succeeded: {succeeded}");
         Console.WriteLine($"Failed: {failed}");
 
@@ -119,8 +120,9 @@ public sealed class ImportHandler : IHandler
             int start = (batchIndex - 1) * command.BatchSize;
             int end = Math.Min(batchIndex * command.BatchSize, index);
             processedCount += end - start;
-            Console.SetCursorPosition(0, Console.CursorTop);
-            Console.Write($"Processed items: {processedCount} ({(double)processedCount / index * 100:F2}%){Environment.NewLine}");
+            var rate = Math.Round(processedCount / sw.Elapsed.TotalSeconds);
+            Extensions.ClearConsoleLine();
+            Console.Write($"Processed items: {processedCount} | {(double)processedCount / index * 100:F2}% | {rate}/sec{Environment.NewLine}");
 
             var tasks = batch.Select(i => i.Task).ToArray();
             await Task.WhenAll(tasks);
