@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace CosmosShuttle;
 
-public class ExportHandler : IHandler
+public sealed class ExportHandler : IHandler
 {
     static readonly byte comma = Convert.ToByte(',');
     static readonly byte newline = Convert.ToByte('\n');

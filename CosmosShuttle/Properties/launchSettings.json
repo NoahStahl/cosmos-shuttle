@@ -9,6 +9,10 @@
     },
     "Emulator Import": {
       "commandName": "Project",
+      "commandLineArgs": "import --db ShuttleDb --container Data --connection emulator --source Data/test-data.json"
+    },
+    "Import --camelcase": {
+      "commandName": "Project",
       "commandLineArgs": "import --db ShuttleDb --container Data --connection emulator --camelcase true --source Data/test-data.json"
     }
   }

@@ -30,14 +30,11 @@ public static class CosmosUtils
         }
         catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            if (databaseProperties is null)
-            {
-                Console.WriteLine($"No database found with name: {command.DatabaseName}");
-            }
-            else
-            {
-                Console.WriteLine($"No container found with name: {command.ContainerName}");
-            }
+            var message = databaseProperties is null 
+                ? $"No database found with name: {command.DatabaseName}" 
+                : $"No container found with name: {command.ContainerName}";
+            Console.WriteLine(message);
+            
             if (command.LogLevel == LogLevel.Verbose)
             {
                 Console.WriteLine(ex.Message);
@@ -48,6 +45,7 @@ public static class CosmosUtils
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to connect: {ex.Message}");
+            
             if (command.LogLevel == LogLevel.Verbose)
             {
                 Console.WriteLine(ex.Message);

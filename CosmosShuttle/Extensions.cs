@@ -7,25 +7,56 @@ public static class Extensions
 {
     private static readonly Dictionary<string, string> camelCaseCache = new();
 
-    public static IReadOnlyList<KeyTransform> GetCamelcaseTransforms(this JsonObject? node)
+    /// <summary>
+    /// Returns item as JsonOject with camelcased keys
+    /// </summary>
+    /// <param name="keys">Optional list of specific keys to transform</param>
+    /// <returns>JsonObject with modified keys if changes, or null if no changes required</returns>
+    /// <exception cref="InvalidDataException">When item cannot be parsed as a JSON object</exception>
+    public static JsonObject? CamelCaseKeys(this JsonElement item, IReadOnlyList<string>? keys = null)
     {
-        if (node is null)
+        var transforms = item.GetCamelcaseTransforms();
+        if (transforms.Count == 0)
         {
-            return Array.Empty<KeyTransform>();
+            return null;
         }
 
-        List<KeyTransform>? transforms = null;
-        foreach (var property in node)
+        // Transform all keys to camelCase. Remove/add each key to maintain original order, even if already correct.
+        var node = JsonSerializer.Deserialize<JsonNode>(item)?.AsObject() ?? throw new InvalidDataException($"Failed to parse data item: {item}");
+        foreach (var property in node.ToArray())
         {
-            if (property.Key.TryCamelCase(out string camelKey))
+            var value = node[property.Key];   // Stash value
+            node.Remove(property.Key);        // Remove old key
+
+            // Add new key
+            if (transforms.TryGetValue(property.Key, out string? camelKey)
+                && (keys is null || keys.Any(i => i.Equals(property.Key, StringComparison.OrdinalIgnoreCase))))
             {
-                (transforms ??= new()).Add(new(property.Key, camelKey));
+                node.TryAdd(camelKey, value);
+            }
+            else
+            {
+                node.TryAdd(property.Key, value);
             }
         }
 
-        if (transforms is null)
+        return node;
+    }
+
+    public static IReadOnlyDictionary<string, string> GetCamelcaseTransforms(this JsonElement item)
+    {
+        if (item.ValueKind != JsonValueKind.Object)
         {
-            return Array.Empty<KeyTransform>();
+            throw new InvalidOperationException($"Expected object value, but received {item.ValueKind}");
+        }
+
+        var transforms = new Dictionary<string, string>();
+        foreach (var property in item.EnumerateObject())
+        {
+            if (property.Name.TryCamelCase(out string camelKey))
+            {
+                transforms.TryAdd(property.Name, camelKey);
+            }
         }
 
         return transforms;
@@ -84,5 +115,3 @@ public static class Extensions
         return (false, null);
     }
 }
-
-public readonly record struct KeyTransform(string From, string To);

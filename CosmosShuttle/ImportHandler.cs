@@ -1,13 +1,13 @@
 ﻿using Microsoft.Azure.Cosmos;
 using System.Diagnostics;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace CosmosShuttle;
 
-public class ImportHandler : IHandler
+public sealed class ImportHandler : IHandler
 {
     static readonly ItemRequestOptions omitResponseContent = new() { EnableContentResponseOnWrite = false };
+    static readonly IReadOnlyList<string> IdKeyOnly = new[] { "id" };
 
     public async ValueTask Run(Command command)
     {
@@ -22,11 +22,7 @@ public class ImportHandler : IHandler
         }
 
         (var container, string? pkProperty) = await CosmosUtils.ConnectContainer(command);
-        if (container is null)
-        {
-            Console.WriteLine("Stopping due to failed connection");
-            return;
-        }
+        if (container is null) return;
 
         Console.WriteLine($"Starting import of items from {command.Source}");
         Console.WriteLine($"Batch size: {command.BatchSize}");
@@ -45,7 +41,6 @@ public class ImportHandler : IHandler
         foreach (var item in items)
         {
             // Ensure id property defined (case-insensitive)
-            string? itemId = null;
             (bool idFound, string? key) = item.TryGetPropertyIgnoreCase("id", out var idProp);
             if (!idFound || key is null)
             {
@@ -53,33 +48,36 @@ public class ImportHandler : IHandler
                 return;
             }
 
+            // Write item to stream, applying key casing transforms as needed
             using MemoryStream stream = new();
             using Utf8JsonWriter writer = new(stream);
-            if (key == "id")
+            string? itemId = null;
+            if (command.Camelcase)
+            {
+                // Ensure camelcasing of keys, using modified item if keys changed
+                var modifiedItem = item.CamelCaseKeys();
+                if (modifiedItem is null)
+                {
+                    itemId = item.TryGetProperty("id", out var idElement) ? idElement.GetString() : null;
+                    item.WriteTo(writer);
+                }
+                else
+                {
+                    itemId = modifiedItem.TryGetPropertyValue("id", out var idNode) ? idNode?.GetValue<string>() : null;
+                    modifiedItem.WriteTo(writer);
+                }
+            }
+            else if (key == "id")
             {
                 itemId = idProp.GetString();
                 item.WriteTo(writer);
             }
-            else if (!command.Camelcase)
+            else
             {
-                // Transform ID property to lowercased key
-                var node = JsonSerializer.Deserialize<JsonNode>(item)?.AsObject() ?? throw new InvalidOperationException($"Failed to parse data item: {item.ToString()}");
-                node.Remove(key);
-                node.TryAdd("id", idProp.GetString());
-                node.WriteTo(writer);
-            }
-            else if (command.Camelcase)
-            {
-                // Transform all keys to camelCase
-                var node = JsonSerializer.Deserialize<JsonNode>(item)?.AsObject() ?? throw new InvalidOperationException($"Failed to parse data item: {item.ToString()}");
-                var transforms = node.GetCamelcaseTransforms();
-                foreach (var transform in transforms)
-                {
-                    var value = node[transform.From];   // Stash value
-                    node.Remove(transform.From);        // Remove old key
-                    node.TryAdd(transform.To, value);   // Add new key
-                }
-                node.WriteTo(writer);
+                // Transform ID property to lowercased key "id"
+                var modifiedItem = item.CamelCaseKeys(IdKeyOnly) ?? throw new Exception("Failed to transform item with non-lowercase 'id' property");
+                itemId = modifiedItem.TryGetPropertyValue("id", out var idNode) ? idNode?.GetValue<string>() : null;
+                modifiedItem.WriteTo(writer);
             }
             writer.Flush();
 
@@ -94,7 +92,6 @@ public class ImportHandler : IHandler
             // Build and process operation batches
             var task = container.UpsertItemStreamAsync(stream, new(partition), omitResponseContent);
             batch.Add(new(itemId, task));
-
             if (batch.Count >= command.BatchSize)
             {
                 await ProcessBatch();
@@ -137,7 +134,7 @@ public class ImportHandler : IHandler
                 else
                 {
                     failed++;
-                    var failedItemId = batch.FirstOrDefault(i => i.Task.Id == task.Id)?.ItemId;
+                    var failedItemId = batch.FirstOrDefault(i => i.Task.Id == task.Id).ItemId;
                     Console.WriteLine($"! Failed to import item '{failedItemId}', response status: {response.StatusCode}");
                 }
             }
@@ -145,4 +142,4 @@ public class ImportHandler : IHandler
     }
 }
 
-public sealed record BatchedOperation(string? ItemId, Task<ResponseMessage> Task);
+readonly record struct BatchedOperation(string? ItemId, Task<ResponseMessage> Task);
