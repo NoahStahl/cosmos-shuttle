@@ -2,6 +2,8 @@
 
 public static class CommandParser
 {
+    public const int TimeoutSecondsDefault = 120;
+
     public static Command Parse(string[] args)
     {
         if (args.Length < 3)
@@ -58,19 +60,26 @@ public static class CommandParser
         if (options.TryGetValue("batchsize", out string? batchsizeRaw)
             && (!int.TryParse(batchsizeRaw, out batchSize) || batchSize < 1 || batchSize > 500))
         {
-            throw new Exception("Invalid value provided for --batchsize. Must be positive integer 1 < 500");
+            throw new Exception("Invalid value provided for --batchsize. Must be positive integer 1 < 500.");
         }
 
         var logLevel = LogLevel.Info;
         if (options.TryGetValue("logging", out string? loggingRaw) && (!Enum.TryParse(loggingRaw, ignoreCase: true, out logLevel)))
         {
-            throw new Exception("Invalid value provided for --logging. Can be 'info' or 'verbose'");
+            throw new Exception("Invalid value provided for --logging. Can be 'info' or 'verbose'.");
         }
 
         var camelCase = false;
-        if (options.TryGetValue("camelcase", out string? camelCaseRow) && (!bool.TryParse(camelCaseRow, out camelCase)))
+        if (options.TryGetValue("camelcase", out string? camelCaseRaw) && !bool.TryParse(camelCaseRaw, out camelCase))
         {
-            throw new Exception("Invalid value provided for --camelcase. Can be 'true' or 'false' (default is false)");
+            throw new Exception("Invalid value provided for --camelcase. Can be 'true' or 'false' (default = false).");
+        }
+
+        var timeoutSeconds = TimeoutSecondsDefault;
+        if (options.TryGetValue("timeout", out string? timeoutRaw) 
+            && (!int.TryParse(timeoutRaw, out timeoutSeconds) || timeoutSeconds < 1))
+        {
+            throw new Exception("Invalid value provided for --timeout. Must be positive integer representing seconds to wait for requests to complete. (default = 120)");
         }
 
         return new()
@@ -82,28 +91,31 @@ public static class CommandParser
             ContainerName = containerName,
             DatabaseName = databaseName,
             LogLevel = logLevel,
-            Source = source
+            Source = source,
+            TimeoutSeconds = timeoutSeconds
         };
     }
 }
 
-public record Command
+public sealed record Command
 {
-    public CommandType BaseCommand { get; set; }
+    public CommandType BaseCommand { get; init; }
 
-    public int BatchSize { get; set; } = 25;
+    public int BatchSize { get; init; } = 25;
 
-    public bool Camelcase { get; set; }
+    public bool Camelcase { get; init; }
 
-    public string ContainerName { get; set; } = string.Empty;
+    public string ContainerName { get; init; } = string.Empty;
 
-    public string DatabaseName { get; set; } = string.Empty;
+    public string DatabaseName { get; init; } = string.Empty;
 
-    public string ConnectionString { get; set; } = string.Empty;
+    public string ConnectionString { get; init; } = string.Empty;
 
-    public LogLevel LogLevel { get; set; }
+    public LogLevel LogLevel { get; init; }
 
-    public string? Source { get; set; }
+    public string? Source { get; init; }
+
+    public int TimeoutSeconds { get; init; } = CommandParser.TimeoutSecondsDefault;
 }
 
 public enum CommandType

@@ -14,6 +14,10 @@
     "Import --camelcase": {
       "commandName": "Project",
       "commandLineArgs": "import --db ShuttleDb --container Data --connection emulator --camelcase true --source Data/test-data.json"
+    },
+    "Export --timeout": {
+      "commandName": "Project",
+      "commandLineArgs": "export --db ShuttleDb --container Data --connection emulator --timeout 30"
     }
   }
 }

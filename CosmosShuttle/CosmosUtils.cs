@@ -12,7 +12,11 @@ public static class CosmosUtils
             ? LocalEmulatorConnection
             : command.ConnectionString;
 
-        var client = new CosmosClient(connectionString, new() { AllowBulkExecution = true });
+        var client = new CosmosClient(connectionString, new()
+        {
+            AllowBulkExecution = true,
+            RequestTimeout = TimeSpan.FromSeconds(command.TimeoutSeconds)
+        });
 
         Console.WriteLine($"Connecting to {client.Endpoint.Host} > {command.DatabaseName} > {command.ContainerName}");
         var database = client.GetDatabase(command.DatabaseName);
@@ -30,11 +34,11 @@ public static class CosmosUtils
         }
         catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            var message = databaseProperties is null 
-                ? $"No database found with name: {command.DatabaseName}" 
+            var message = databaseProperties is null
+                ? $"No database found with name: {command.DatabaseName}"
                 : $"No container found with name: {command.ContainerName}";
             Console.WriteLine(message);
-            
+
             if (command.LogLevel == LogLevel.Verbose)
             {
                 Console.WriteLine(ex.Message);
@@ -45,7 +49,7 @@ public static class CosmosUtils
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to connect: {ex.Message}");
-            
+
             if (command.LogLevel == LogLevel.Verbose)
             {
                 Console.WriteLine(ex.Message);
