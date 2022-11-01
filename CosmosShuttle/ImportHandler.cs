@@ -28,8 +28,7 @@ public sealed class ImportHandler : IHandler
         Console.WriteLine($"Batch size: {command.BatchSize}");
 
         using var file = File.OpenRead(command.Source);
-        using var json = await JsonDocument.ParseAsync(file, new() { AllowTrailingCommas = true });
-        var items = json.RootElement.EnumerateArray();
+        var items = JsonSerializer.DeserializeAsyncEnumerable<JsonElement>(file, new() { AllowTrailingCommas = true });
 
         int succeeded = 0;
         int failed = 0;
@@ -38,7 +37,7 @@ public sealed class ImportHandler : IHandler
         var sw = Stopwatch.StartNew();
         var batch = new List<BatchedOperation>(command.BatchSize);
         int batchIndex = 1;
-        foreach (var item in items)
+        await foreach (var item in items)
         {
             // Ensure id property defined (case-insensitive)
             (bool idFound, string? key) = item.TryGetPropertyIgnoreCase("id", out var idProp);
@@ -108,7 +107,7 @@ public sealed class ImportHandler : IHandler
         }
 
         file.Close();
-        
+
         var elapsed = $"{sw.Elapsed.TotalHours:F0}h {sw.Elapsed.TotalMinutes:F0}m {sw.Elapsed.TotalSeconds:F0}s";
         Console.WriteLine();
         Console.WriteLine($"Finished importing {index} items, elapsed: {elapsed}");
@@ -122,7 +121,7 @@ public sealed class ImportHandler : IHandler
             processedCount += end - start;
             var rate = Math.Round(processedCount / sw.Elapsed.TotalSeconds);
             Extensions.ClearConsoleLine();
-            Console.Write($"Processed items: {processedCount} | {(double)processedCount / index * 100:F2}% | {rate}/sec{Environment.NewLine}");
+            Console.Write($"Processed items: {processedCount} | {rate}/sec");
 
             var tasks = batch.Select(i => i.Task).ToArray();
             await Task.WhenAll(tasks);
