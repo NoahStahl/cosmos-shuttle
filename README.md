@@ -38,13 +38,20 @@ If successful, a JSON file is created representing all the items in the containe
 
 `CosmosShuttle.exe import --source <SOURCE_FILE> --db <DATABASE_NAME> --container <CONTAINER_NAME> --batchsize <BATCH_SIZE> --connection "<CONNECTION_STRING>"`
 
-where:
+Emulator example:
 
-- SOURCE_FILE: Path to the JSON file exported by this tool. This data will be imported into the target container.
-- BATCH_SIZE: Number of upsert operations to perform in parallel batches. `1` to `500` allowed. Default: `25`
-- DATABASE_NAME: Target Cosmos DB database
-- CONTAINER_NAME: identifier of a target container into which to import all items
-- CONNECTION_STRING: connection string value (Read-Write)
+`CosmosShuttle.exe import --source export.json --db contoso-db --container data --connection emulator`
+
+Available parameters:
+
+- `batchsize`: Number of upsert operations to perform in parallel batches. `1` to `500` allowed. Default: `25`
+- `camelcase`: Specifying `true` converts all items to have camelCased property keys during import
+- `connecton`: connection string value (Read-Write). May use `emulator` as shortcut for local emulator conneciton string. 
+- `container`: identifier of a target container into which to import all items
+- `db`: Target Cosmos DB database
+- `logging`: Controls verbosity of output. Levels: `info` | `verbose`
+- `source`: Path to the JSON file exported by this tool. This data will be imported into the target container.
+- `timeout`: Number of seconds to wait for responses from Cosmos DB. Default: `120`
 
 If successful, all items in the source file will be created or updated in the target container.
 

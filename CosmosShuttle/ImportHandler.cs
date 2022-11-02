@@ -43,8 +43,9 @@ public sealed class ImportHandler : IHandler
             (bool idFound, string? key) = item.TryGetPropertyIgnoreCase("id", out var idProp);
             if (!idFound || key is null)
             {
-                Console.WriteLine($"! Invalid data: No id value present for item [{index}]");
-                return;
+                Extensions.ClearConsoleLine();
+                Console.WriteLine($"! Invalid data: Skipping item [{index}] with no id value");
+                continue;
             }
 
             // Write item to stream, applying key casing transforms as needed
@@ -84,8 +85,9 @@ public sealed class ImportHandler : IHandler
             string? partition = null;
             if (pkProperty is not null && (!item.TryGetProperty(pkProperty, out var pk) || (partition = pk.GetString()) is null))
             {
-                Console.WriteLine($"! Invalid data: Item {itemId ?? $"[{index}]"} is missing expected partition key property '{pkProperty}'");
-                return;
+                Extensions.ClearConsoleLine();
+                Console.WriteLine($"! Invalid data: Skipping item with id '{itemId}' which lacks expected partition key property '{pkProperty}'");
+                continue;
             }
 
             // Build and process operation batches
