@@ -76,7 +76,7 @@ public sealed class ExportHandler : IHandler
         file.Flush();
 
         Console.WriteLine();
-        Console.WriteLine($"Finished exporting {total} items, elapsed: {sw.Elapsed}");
+        Console.WriteLine($"Finished exporting {total} items, elapsed: {sw.Elapsed.FormatDisplay()}");
         Console.WriteLine($"Created file: {path}");
     }
 

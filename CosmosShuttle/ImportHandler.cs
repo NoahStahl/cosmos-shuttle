@@ -110,9 +110,8 @@ public sealed class ImportHandler : IHandler
 
         file.Close();
 
-        var elapsed = $"{sw.Elapsed.TotalHours:F0}h {sw.Elapsed.TotalMinutes:F0}m {sw.Elapsed.TotalSeconds:F0}s";
         Console.WriteLine();
-        Console.WriteLine($"Finished importing {index} items, elapsed: {elapsed}");
+        Console.WriteLine($"Finished importing {index} items, elapsed: {sw.Elapsed.FormatDisplay()}");
         Console.WriteLine($"Succeeded: {succeeded}");
         Console.WriteLine($"Failed: {failed}");
 

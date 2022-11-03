@@ -50,6 +50,11 @@ public static class Extensions
         Console.SetCursorPosition(0, Console.CursorTop);
     }
 
+    public static string FormatDisplay(this TimeSpan value)
+    {
+        return $"{value.TotalHours:F0}h {value.TotalMinutes % 60:F0}m {value.TotalSeconds % 60:F0}s";
+    }
+
     public static IReadOnlyDictionary<string, string> GetCamelcaseTransforms(this JsonElement item)
     {
         if (item.ValueKind != JsonValueKind.Object)
