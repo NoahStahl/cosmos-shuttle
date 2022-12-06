@@ -7,6 +7,7 @@ namespace CosmosShuttle;
 public sealed class ImportHandler : IHandler
 {
     static readonly ItemRequestOptions omitResponseContent = new() { EnableContentResponseOnWrite = false };
+    static readonly JsonSerializerOptions deserializationOptions = new () { AllowTrailingCommas = true };
     static readonly IReadOnlyList<string> IdKeyOnly = new[] { "id" };
 
     public async ValueTask Run(Command command)
@@ -28,7 +29,7 @@ public sealed class ImportHandler : IHandler
         Console.WriteLine($"Batch size: {command.BatchSize}");
 
         using var file = File.OpenRead(command.Source);
-        var items = JsonSerializer.DeserializeAsyncEnumerable<JsonElement>(file, new() { AllowTrailingCommas = true });
+        var items = JsonSerializer.DeserializeAsyncEnumerable<JsonElement>(file, deserializationOptions);
 
         int succeeded = 0;
         int failed = 0;
