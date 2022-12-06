@@ -18,6 +18,10 @@
     "Export --timeout": {
       "commandName": "Project",
       "commandLineArgs": "export --db ShuttleDb --container Data --connection emulator --timeout 30"
+    },
+    "Export --after": {
+      "commandName": "Project",
+      "commandLineArgs": "export --db ShuttleDb --container Data --connection emulator --after 1670348626"
     }
   }
 }

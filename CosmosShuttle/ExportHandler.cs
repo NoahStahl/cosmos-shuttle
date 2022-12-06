@@ -19,7 +19,8 @@ public sealed class ExportHandler : IHandler
         }
 
         // Pre-count items in container
-        int expectedCount = await CountItems(container);
+        var afterClause = command.After.HasValue ? $"WHERE c._ts >= {command.After.Value}" : null;
+        int expectedCount = await CountItems(container, afterClause);
         Console.WriteLine($"Starting export of {expectedCount} expected items");
 
         // Create file
@@ -32,7 +33,9 @@ public sealed class ExportHandler : IHandler
 
         int total = 0;
         var sw = Stopwatch.StartNew();
-        using var resultSet = container.GetItemQueryStreamIterator("SELECT * from c");
+        var query = $"SELECT * from c {afterClause}".Trim();
+        Console.WriteLine($"Using query: {query}");
+        using var resultSet = container.GetItemQueryStreamIterator(query);
         while (resultSet.HasMoreResults)
         {
             using ResponseMessage response = await resultSet.ReadNextAsync();
@@ -65,7 +68,7 @@ public sealed class ExportHandler : IHandler
 
             file.Flush();
 
-            var rate = Math.Round(total / sw.Elapsed.TotalSeconds);
+            var rate = Math.Min(total, Math.Round(total / sw.Elapsed.TotalSeconds));
             Extensions.ClearConsoleLine();
             Console.Write($"Processed items: {total} | {(double)total / expectedCount * 100:F2}% | {rate}/sec");
         }
@@ -80,9 +83,9 @@ public sealed class ExportHandler : IHandler
         Console.WriteLine($"Created file: {path}");
     }
 
-    static async ValueTask<int> CountItems(Container container)
+    static async ValueTask<int> CountItems(Container container, string? afterClause)
     {
-        using var countResultSet = container.GetItemQueryStreamIterator("SELECT VALUE COUNT(1) FROM c");
+        using var countResultSet = container.GetItemQueryStreamIterator($"SELECT VALUE COUNT(1) FROM c {afterClause}");
         int expectedCount = 0;
         while (countResultSet.HasMoreResults)
         {

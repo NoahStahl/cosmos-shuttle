@@ -56,6 +56,24 @@ public static class CommandParser
         }
 
         // Optional parameters
+
+        long? after = null;
+        if (options.TryGetValue("after", out string? afterRaw))
+        {
+            if (long.TryParse(afterRaw, out long afterParsedUnixSeconds))
+            {
+                after = afterParsedUnixSeconds;
+            }
+            else if (DateTime.TryParse(afterRaw, out DateTime afterParsed))
+            {
+                after = ((DateTimeOffset)afterParsed).ToUnixTimeSeconds();
+            }
+            else
+            {
+                throw new Exception("Invalid value provided for --after. Must be timestamp in either ISO 8601 or UNIX seconds format.");
+            }
+        }
+
         int batchSize = 25;
         if (options.TryGetValue("batchsize", out string? batchsizeRaw)
             && (!int.TryParse(batchsizeRaw, out batchSize) || batchSize < 1 || batchSize > 500))
@@ -76,7 +94,7 @@ public static class CommandParser
         }
 
         var timeoutSeconds = TimeoutSecondsDefault;
-        if (options.TryGetValue("timeout", out string? timeoutRaw) 
+        if (options.TryGetValue("timeout", out string? timeoutRaw)
             && (!int.TryParse(timeoutRaw, out timeoutSeconds) || timeoutSeconds < 1))
         {
             throw new Exception("Invalid value provided for --timeout. Must be positive integer representing seconds to wait for requests to complete. (default = 120)");
@@ -84,9 +102,10 @@ public static class CommandParser
 
         return new()
         {
+            After = after,
             BatchSize = batchSize,
             BaseCommand = baseCommand,
-            Camelcase= camelCase,
+            Camelcase = camelCase,
             ConnectionString = connectionString,
             ContainerName = containerName,
             DatabaseName = databaseName,
@@ -99,6 +118,11 @@ public static class CommandParser
 
 public sealed record Command
 {
+    /// <summary>
+    /// Optional timestamp parameter
+    /// </summary>
+    public long? After { get; init; }
+
     public CommandType BaseCommand { get; init; }
 
     public int BatchSize { get; init; } = 25;
