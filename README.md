@@ -44,6 +44,7 @@ Emulator example:
 
 Available parameters:
 
+- `after`: Export items with `_ts` timestamp after this value. Can be UNIX seconds like `1670358000` or ISO 8601 timestamp like `2022-12-25T08:00` 
 - `batchsize`: Number of upsert operations to perform in parallel batches. `1` to `500` allowed. Default: `25`
 - `camelcase`: Specifying `true` converts all items to have camelCased property keys during import
 - `connecton`: connection string value (Read-Write). May use `emulator` as shortcut for local emulator conneciton string. 
