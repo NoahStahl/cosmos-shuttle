@@ -1,7 +1,10 @@
-﻿namespace CosmosShuttle;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace CosmosShuttle;
 
 public static class CommandParser
 {
+    public const int BatchsizeDefault = 25;
     public const int TimeoutSecondsDefault = 120;
 
     public static Command Parse(string[] args)
@@ -60,21 +63,41 @@ public static class CommandParser
         long? after = null;
         if (options.TryGetValue("after", out string? afterRaw))
         {
-            if (long.TryParse(afterRaw, out long afterParsedUnixSeconds))
-            {
-                after = afterParsedUnixSeconds;
-            }
-            else if (DateTime.TryParse(afterRaw, out DateTime afterParsed))
-            {
-                after = ((DateTimeOffset)afterParsed).ToUnixTimeSeconds();
-            }
-            else
+            if (!TryParseTimestamp(afterRaw, out after))
             {
                 throw new Exception("Invalid value provided for --after. Must be timestamp in either ISO 8601 or UNIX seconds format.");
             }
         }
 
-        int batchSize = 25;
+        long? before = null;
+        if (options.TryGetValue("before", out string? beforeRaw))
+        {
+            if (after.HasValue)
+            {
+                throw new ArgumentException("Cannot specify both --before and --after");
+            }
+
+            if (!TryParseTimestamp(beforeRaw, out before))
+            {
+                throw new Exception("Invalid value provided for --before. Must be timestamp in either ISO 8601 or UNIX seconds format.");
+            }
+        }
+
+        TimeRange? timerange = null;
+        if (options.TryGetValue("timerange", out string? timerangeRaw))
+        {
+            if (after.HasValue || before.HasValue)
+            {
+                throw new ArgumentException("Cannot specify --timerange with either --before or --after");
+            }
+
+            if (!TryParseTimeRange(timerangeRaw, out timerange))
+            {
+                throw new Exception("Invalid value provided for --timerange. Must be pair of timestamps in either ISO 8601 or UNIX seconds format, separated by | (pipe), ex: 1650112000|1670544000");
+            }
+        }
+
+        int batchSize = BatchsizeDefault;
         if (options.TryGetValue("batchsize", out string? batchsizeRaw)
             && (!int.TryParse(batchsizeRaw, out batchSize) || batchSize < 1 || batchSize > 500))
         {
@@ -103,6 +126,7 @@ public static class CommandParser
         return new()
         {
             After = after,
+            Before = before,
             BatchSize = batchSize,
             BaseCommand = baseCommand,
             Camelcase = camelCase,
@@ -111,17 +135,60 @@ public static class CommandParser
             DatabaseName = databaseName,
             LogLevel = logLevel,
             Source = source,
+            TimeRange = timerange,
             TimeoutSeconds = timeoutSeconds
         };
+    }
+
+    static bool TryParseTimeRange(string value, [NotNullWhen(true)] out TimeRange? parsed)
+    {
+        parsed = null;
+        var splitIndex = value.IndexOf('|');
+        if (splitIndex < 0)
+        {
+            return false;
+        }
+
+        if (!TryParseTimestamp(value.AsSpan(0, splitIndex), out long? start)
+            || !TryParseTimestamp(value.AsSpan(splitIndex + 1), out long? end))
+        {
+            return false;
+        }
+
+        parsed = new(start.Value, end.Value);
+        return true;
+    }
+
+    /// <summary>
+    /// Parse string value into UNIX timestamp. Allows either UNIX epoch or ISO string datetime.
+    /// </summary>
+    static bool TryParseTimestamp(ReadOnlySpan<char> value, [NotNullWhen(true)] out long? parsed)
+    {
+        parsed = null;
+        if (long.TryParse(value, out long parsedUnixSeconds))
+        {
+            parsed = parsedUnixSeconds;
+        }
+        else if (DateTime.TryParse(value, out DateTime dateTime))
+        {
+            parsed = ((DateTimeOffset)dateTime).ToUnixTimeSeconds();
+        }
+
+        return parsed.HasValue;
     }
 }
 
 public sealed record Command
 {
     /// <summary>
-    /// Optional timestamp parameter
+    /// Optional timestamp parameter to query items after specified Unix time
     /// </summary>
     public long? After { get; init; }
+
+    /// <summary>
+    /// Optional timestamp parameter to query items before specified Unix time
+    /// </summary>
+    public long? Before { get; init; }
 
     public CommandType BaseCommand { get; init; }
 
@@ -136,6 +203,8 @@ public sealed record Command
     public string ConnectionString { get; init; } = string.Empty;
 
     public LogLevel LogLevel { get; init; }
+
+    public TimeRange? TimeRange { get; init; }
 
     public string? Source { get; init; }
 
@@ -154,3 +223,8 @@ public enum LogLevel
     Info,
     Verbose
 }
+
+/// <summary>
+/// Represents a period between two Unix times
+/// </summary>
+public record TimeRange(long Start, long End);

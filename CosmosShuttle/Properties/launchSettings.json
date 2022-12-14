@@ -22,6 +22,14 @@
     "Export --after": {
       "commandName": "Project",
       "commandLineArgs": "export --db ShuttleDb --container Data --connection emulator --after 1670348626"
+    },
+    "Export --before": {
+      "commandName": "Project",
+      "commandLineArgs": "export --db ShuttleDb --container Data --connection emulator --before 1670348626"
+    },
+    "Export --timerange": {
+      "commandName": "Project",
+      "commandLineArgs": "export --db ShuttleDb --container Data --connection emulator --timerange 1650112000|1670544000"
     }
   }
 }

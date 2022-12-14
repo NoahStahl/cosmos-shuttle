@@ -18,9 +18,23 @@ public sealed class ExportHandler : IHandler
             return;
         }
 
+        // Map optional filter clause from command
+        string? filter = null;
+        if (command.After.HasValue)
+        {
+            filter = $"c._ts >= {command.After.Value}";
+        }
+        else if (command.Before.HasValue)
+        {
+            filter = $"c._ts <= {command.Before.Value}";
+        }
+        else if (command.TimeRange is not null)
+        {
+            filter = $"c._ts >= {command.TimeRange.Start} AND c._ts <= {command.TimeRange.End}";
+        }
+
         // Pre-count items in container
-        var afterClause = command.After.HasValue ? $"WHERE c._ts >= {command.After.Value}" : null;
-        int expectedCount = await CountItems(container, afterClause);
+        int expectedCount = await CountItems(container, filter);
         Console.WriteLine($"Starting export of {expectedCount} expected items");
 
         // Create file
@@ -33,7 +47,8 @@ public sealed class ExportHandler : IHandler
 
         int total = 0;
         var sw = Stopwatch.StartNew();
-        var query = $"SELECT * from c {afterClause}".Trim();
+        const string baseQuery = "SELECT * FROM c";
+        var query = filter is not null ? $"{baseQuery} WHERE {filter}" : baseQuery;
         Console.WriteLine($"Using query: {query}");
         using var resultSet = container.GetItemQueryStreamIterator(query);
         while (resultSet.HasMoreResults)
@@ -83,9 +98,11 @@ public sealed class ExportHandler : IHandler
         Console.WriteLine($"Created file: {path}");
     }
 
-    static async ValueTask<int> CountItems(Container container, string? afterClause)
+    static async ValueTask<int> CountItems(Container container, string? filter)
     {
-        using var countResultSet = container.GetItemQueryStreamIterator($"SELECT VALUE COUNT(1) FROM c {afterClause}");
+        const string baseQuery = "SELECT VALUE COUNT(1) FROM c";
+        var query = filter is not null ? $"{baseQuery} WHERE {filter}" : baseQuery;
+        using var countResultSet = container.GetItemQueryStreamIterator(query);
         int expectedCount = 0;
         while (countResultSet.HasMoreResults)
         {
