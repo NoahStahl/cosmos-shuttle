@@ -9,7 +9,7 @@ To build the project into the tool executable:
 1. Clone this repository
 2. From a command line terminal, change to `.../cosmos-shuttle/CosmosShuttle`
 3. Run build command: `dotnet publish -c Release -r win-x64 --self-contained`
-4. Locate the produced `CosmosShuttle.exe` file under `.../bin/Release/net6.0/win-x64/publish`
+4. Locate the produced `CosmosShuttle.exe` file under `.../bin/Release/net7.0/win-x64/publish`
 
 
 # Running the tool
@@ -44,6 +44,7 @@ Emulator example:
 
 Available parameters:
 
+- `after`: Export items with `_ts` timestamp after this value. Can be UNIX seconds like `1670358000` or ISO 8601 timestamp like `2022-12-25T08:00` 
 - `batchsize`: Number of upsert operations to perform in parallel batches. `1` to `500` allowed. Default: `25`
 - `camelcase`: Specifying `true` converts all items to have camelCased property keys during import
 - `connecton`: connection string value (Read-Write). May use `emulator` as shortcut for local emulator conneciton string. 
