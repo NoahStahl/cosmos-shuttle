@@ -1,11 +1,12 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Concurrent;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace CosmosShuttle;
 
 public static class Extensions
 {
-    private static readonly Dictionary<string, string> camelCaseCache = new();
+    private static readonly ConcurrentDictionary<string, string> camelCaseCache = [];
 
     /// <summary>
     /// Returns item as JsonOject with camelcased keys
@@ -13,7 +14,7 @@ public static class Extensions
     /// <param name="keys">Optional list of specific keys to transform</param>
     /// <returns>JsonObject with modified keys if changes, or null if no changes required</returns>
     /// <exception cref="InvalidDataException">When item cannot be parsed as a JSON object</exception>
-    public static JsonObject? CamelCaseKeys(this JsonElement item, IReadOnlyList<string>? keys = null)
+    public static JsonObject? CamelCaseKeys(this JsonElement item, IReadOnlySet<string>? keys = null)
     {
         var transforms = item.GetCamelcaseTransforms();
         if (transforms.Count == 0)

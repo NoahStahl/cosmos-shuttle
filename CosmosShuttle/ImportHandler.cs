@@ -1,4 +1,5 @@
 ﻿using Microsoft.Azure.Cosmos;
+using System.Collections.Frozen;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -8,7 +9,7 @@ public sealed class ImportHandler : IHandler
 {
     static readonly ItemRequestOptions omitResponseContent = new() { EnableContentResponseOnWrite = false };
     static readonly JsonSerializerOptions deserializationOptions = new () { AllowTrailingCommas = true };
-    static readonly IReadOnlyList<string> IdKeyOnly = new[] { "id" };
+    static readonly FrozenSet<string> IdKeyOnly = new[] { "id" }.ToFrozenSet();
 
     public async ValueTask Run(Command command)
     {
